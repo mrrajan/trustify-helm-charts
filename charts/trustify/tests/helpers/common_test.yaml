@@ -1,0 +1,59 @@
+suite: common helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: should render string env var as value field
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_HOST
+            value: "localhost"
+
+  - it: should render integer port as quoted value
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_PORT
+            value: "5432"
+
+  - it: should render byteSizeValue for uploadLimit
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.uploadLimit: "100MiB"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_SBOM_UPLOAD_LIMIT
+            value: "100MiB"
+
+  - it: should fail when required database host is missing
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      database.host: null
+    asserts:
+      - failedTemplate: {}
+
+  - it: should not render uploadLimit env vars when not set
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_SBOM_UPLOAD_LIMIT
+          any: true

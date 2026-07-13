@@ -1,0 +1,85 @@
+suite: auth helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: auth volume mount subPath defaults to auth.yaml
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config-auth
+            mountPath: /etc/config/auth.yaml
+            subPath: auth.yaml
+
+  - it: auth volume uses generated configmap name server-auth
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: server-auth
+
+  - it: auth ConfigMap renders by default with kind ConfigMap
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+
+  - it: auth ConfigMap includes scopeMappings for keycloak default
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - matchRegex:
+          path: data["auth.yaml"]
+          pattern: "create:document"
+
+  - it: cognito auth produces groupSelector
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    set:
+      authenticator:
+        type: cognito
+    asserts:
+      - matchRegex:
+          path: data["auth.yaml"]
+          pattern: "groupSelector"
+
+  - it: auth ConfigMap not rendered when global authenticator configMapRef set
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    set:
+      authenticator:
+        configMapRef:
+          name: external-auth
+          key: custom-auth.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: auth volume mount always present in server deployment
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config-auth
+            mountPath: /etc/config/auth.yaml
+            subPath: auth.yaml
+
+  - it: auth ConfigMap includes both frontend and cli clients
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - matchRegex:
+          path: data["auth.yaml"]
+          pattern: "frontend"
+      - matchRegex:
+          path: data["auth.yaml"]
+          pattern: "cli"

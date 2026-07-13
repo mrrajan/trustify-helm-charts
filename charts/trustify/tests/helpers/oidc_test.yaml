@@ -1,0 +1,117 @@
+suite: oidc helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: UI_CLIENT_ID defaults to frontend
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_CLIENT_ID
+            value: frontend
+
+  - it: UI_CLIENT_ID uses custom clientId when set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      oidc.clients.frontend.clientId: my-frontend
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_CLIENT_ID
+            value: my-frontend
+
+  - it: UI_ISSUER_URL defaults to generated URL from appDomain
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_ISSUER_URL
+            value: "http://sso.test.example.com/realms/trustify"
+
+  - it: UI_ISSUER_URL uses explicit issuerUrl when set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      oidc.issuerUrl: "https://my-sso/realms/test"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_ISSUER_URL
+            value: "https://my-sso/realms/test"
+
+  - it: UI_LOAD_USER defaults to true quoted
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_LOAD_USER
+            value: "true"
+
+  - it: UI_SCOPE not present when oidc.uiScope is empty
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_SCOPE
+          any: true
+
+  - it: UI_SCOPE present when oidc.uiScope is set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      oidc.uiScope: "openid profile"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_SCOPE
+            value: "openid profile"
+
+  - it: SWAGGER_UI_OIDC_ISSUER_URL present by default
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SWAGGER_UI_OIDC_ISSUER_URL
+          any: true
+
+  - it: SWAGGER_UI_OIDC_CLIENT_ID present by default
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SWAGGER_UI_OIDC_CLIENT_ID
+          any: true
+
+  - it: swagger OIDC env vars absent when disableSwaggerOidc set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.disableSwaggerOidc: true
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SWAGGER_UI_OIDC_ISSUER_URL
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SWAGGER_UI_OIDC_CLIENT_ID
+          any: true

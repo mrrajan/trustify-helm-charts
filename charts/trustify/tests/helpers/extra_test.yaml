@@ -1,0 +1,42 @@
+suite: extra helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: extra volumes rendered when extraVolumes is set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      extraVolumes:
+        - name: my-config
+          configMap:
+            name: my-config-map
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: my-config
+            configMap:
+              name: my-config-map
+
+  - it: extra volume mounts rendered when extraVolumeMounts is set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      extraVolumeMounts:
+        - name: my-config
+          mountPath: /etc/my-config
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: my-config
+            mountPath: /etc/my-config

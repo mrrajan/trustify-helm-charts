@@ -1,0 +1,127 @@
+suite: keycloak job
+templates:
+  - templates/keycloak/020-Job.yaml
+tests:
+  - it: renders when keycloak enabled
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - isKind:
+          of: Job
+
+  - it: does not render when keycloak disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: does not render when keycloakPostInstall disabled
+    set:
+      keycloak:
+        enabled: true
+      keycloakPostInstall:
+        disabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is post-install-keycloak
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - equal:
+          path: metadata.name
+          value: post-install-keycloak
+
+  - it: has ArgoCD hook annotation PreSync
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/hook"]
+          value: PreSync
+
+  - it: has Helm hook annotation post-install,post-upgrade
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: post-install,post-upgrade
+
+  - it: uses correct image from keycloakPostInstall.image
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "docker.io/bitnamilegacy/keycloak:26"
+
+  - it: REALM env var defaults to trustify
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REALM
+            value: trustify
+
+  - it: KEYCLOAK_URL uses default URL containing svc.cluster.local
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name=="KEYCLOAK_URL")].value
+          pattern: "svc\\.cluster\\.local"
+
+  - it: custom keycloakUrl overrides default
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+      keycloakPostInstall:
+        keycloakUrl: "http://custom:8080"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: KEYCLOAK_URL
+            value: "http://custom:8080"
+
+  - it: KCADM_PATH is set from config
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: KCADM_PATH
+            value: /opt/bitnami/keycloak/bin/kcadm.sh
+
+  - it: init-data volume mount at /etc/init-data
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/init-data
+            name: init-data

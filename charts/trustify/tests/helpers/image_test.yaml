@@ -1,0 +1,78 @@
+suite: image helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: default image uses ghcr.io/guacsec registry
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: "^ghcr\\.io/guacsec/"
+
+  - it: default image name is trustd
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: "/trustd:"
+
+  - it: default pullPolicy is IfNotPresent
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: IfNotPresent
+
+  - it: module-level registry override
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.image.registry: custom.registry.io/org
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: "^custom\\.registry\\.io/org/"
+
+  - it: module-level version override
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.image.version: "1.2.3"
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: ":1\\.2\\.3$"
+
+  - it: fullName at module level overrides everything
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.image.fullName: "my.registry.io/custom-image:latest"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "my.registry.io/custom-image:latest"
+
+  - it: module-level pullPolicy override
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.image.pullPolicy: Always
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always
+
+  - it: default image tag uses Chart.AppVersion
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: ":0\\.4\\.13$"

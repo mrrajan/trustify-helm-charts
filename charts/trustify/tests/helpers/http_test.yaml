@@ -1,0 +1,92 @@
+suite: http helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: "HTTP_SERVER_BIND_ADDR always set to ::"
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_BIND_ADDR
+            value: "::"
+
+  - it: non-OpenShift has no HTTP_SERVER_TLS_ENABLED env var
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_TLS_ENABLED
+          any: true
+
+  - it: OpenShift with useServiceCa sets HTTP_SERVER_TLS_ENABLED to true
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      openshift:
+        enabled: true
+        useServiceCa: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_TLS_ENABLED
+            value: "true"
+
+  - it: requestLimit included when set on module
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.requestLimit: "256MiB"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_REQUEST_LIMIT
+            value: "256MiB"
+
+  - it: jsonLimit included when set on module
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.jsonLimit: "64MiB"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_JSON_LIMIT
+            value: "64MiB"
+
+  - it: workers included when set on module
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.workers: 4
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_WORKERS
+            value: "4"
+
+  - it: OpenShift TLS volume mount at /etc/tls present
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      openshift:
+        enabled: true
+        useServiceCa: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/tls
+            name: tls
+            readOnly: true

@@ -1,0 +1,32 @@
+suite: helper templates
+templates:
+  - templates/keycloak/020-Job.yaml
+set:
+  keycloak:
+    enabled: true
+  appDomain: .test.example.com
+tests:
+  - it: KEYCLOAK_URL uses default helper URL containing release name
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: KEYCLOAK_URL
+          any: true
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name=="KEYCLOAK_URL")].value
+          pattern: "keycloak.*svc\\.cluster\\.local"
+
+  - it: REALM defaults to trustify
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REALM
+            value: trustify
+
+  - it: REDIRECT_URIS contains localhost for non-OpenShift
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].env[?(@.name=="REDIRECT_URIS")].value
+          pattern: "localhost"

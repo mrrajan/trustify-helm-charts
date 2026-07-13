@@ -1,0 +1,104 @@
+suite: importer deployment
+templates:
+  - templates/services/importer/030-Deployment.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: renders when importer is enabled
+    asserts:
+      - isKind:
+          of: Deployment
+
+  - it: does not render when disabled
+    set:
+      modules.importer.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is importer
+    asserts:
+      - equal:
+          path: metadata.name
+          value: importer
+
+  - it: command is trustd
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value:
+            - /usr/local/bin/trustd
+
+  - it: args include importer and working-dir
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: importer
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --working-dir
+
+  - it: concurrency defaults to 1 in args
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "1"
+
+  - it: custom concurrency value
+    set:
+      modules.importer.concurrency: 4
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "4"
+
+  - it: workdir volume mount at /data/workdir
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: workdir
+            mountPath: /data/workdir
+
+  - it: workdir ephemeral volume with storage size 32Gi
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].name
+          value: workdir
+      - equal:
+          path: spec.template.spec.volumes[0].ephemeral.volumeClaimTemplate.spec.resources.requests.storage
+          value: "32Gi"
+
+  - it: NAMESPACE env var present
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+
+  - it: TRUSTD_DB_HOST env var present
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_HOST
+            value: localhost
+
+  - it: storage volume mount present for filesystem
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: storage
+            mountPath: /data/storage

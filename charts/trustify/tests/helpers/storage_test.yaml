@@ -1,0 +1,194 @@
+suite: storage helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: filesystem sets TRUSTD_STORAGE_STRATEGY to fs
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 10Gi
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_STORAGE_STRATEGY
+            value: "fs"
+
+  - it: filesystem sets TRUSTD_STORAGE_FS_PATH to /data/storage
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 10Gi
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_STORAGE_FS_PATH
+            value: "/data/storage"
+
+  - it: filesystem renders storage volume mount
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 10Gi
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: storage
+            mountPath: /data/storage
+
+  - it: filesystem renders PVC volume
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 10Gi
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: storage
+            persistentVolumeClaim:
+              claimName: storage
+          any: true
+
+  - it: s3 sets TRUSTD_STORAGE_STRATEGY to s3
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: s3
+        accessKey: testkey
+        secretKey: testsecret
+        region: us-east-1
+        bucket: mybucket
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_STORAGE_STRATEGY
+            value: "s3"
+
+  - it: s3 includes access key, secret key, region, bucket env vars
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: s3
+        accessKey: testkey
+        secretKey: testsecret
+        region: us-east-1
+        bucket: mybucket
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_S3_ACCESS_KEY
+            value: "testkey"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_S3_SECRET_KEY
+            value: "testsecret"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_S3_REGION
+            value: "us-east-1"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_S3_BUCKET
+            value: "mybucket"
+
+  - it: s3 does not render storage volume mount
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: s3
+        accessKey: testkey
+        secretKey: testsecret
+        region: us-east-1
+        bucket: mybucket
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: storage
+            mountPath: /data/storage
+
+  - it: s3 does not render PVC volume
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: s3
+        accessKey: testkey
+        secretKey: testsecret
+        region: us-east-1
+        bucket: mybucket
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: storage
+          any: true
+
+  - it: compression env var included when storage.compression is set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 10Gi
+        compression: zstd
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_STORAGE_COMPRESSION
+            value: "zstd"
+
+  - it: no compression env var when not set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 10Gi
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_STORAGE_COMPRESSION
+          any: true
+
+  - it: filesystem renders pod affinity
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 10Gi
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.affinity.podAffinity
+
+  - it: s3 does not render pod affinity
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      storage:
+        type: s3
+        accessKey: testkey
+        secretKey: testsecret
+        region: us-east-1
+        bucket: mybucket
+    asserts:
+      - isNull:
+          path: spec.template.spec.affinity.podAffinity

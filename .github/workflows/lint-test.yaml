@@ -20,6 +20,26 @@ jobs:
             exit 1
           fi
 
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.2.0
+        with:
+          version: v3.13.3
+
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --version v1.1.1 --verify=false
+
+      - name: Run unit tests (trustify)
+        run: helm unittest -f 'tests/**/*_test.yaml' charts/trustify
+
+      - name: Run unit tests (trustify-infrastructure)
+        run: helm unittest -f 'tests/**/*_test.yaml' charts/trustify-infrastructure
+
   lint-test:
     runs-on: ubuntu-latest
     steps:

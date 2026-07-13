@@ -58,10 +58,11 @@ helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.
 Run the tests:
 
 ```shell
-helm unittest charts/trustify
+helm unittest -f 'tests/**/*_test.yaml' charts/trustify
+helm unittest -f 'tests/**/*_test.yaml' charts/trustify-infrastructure
 ```
 
-Test files live in `charts/trustify/tests/` with the suffix `_test.yaml`.
+Test files live in `charts/<chart>/tests/` organized by subdirectory (helpers, server, importer, init, keycloak) with the suffix `_test.yaml`.
 
 ## Find that whitespace
 

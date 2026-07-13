@@ -1,0 +1,86 @@
+suite: postgres helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: db.example.com
+    name: trustify
+    username: dbuser
+    password: dbpass
+tests:
+  - it: TRUSTD_DB_HOST is set from database.host
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_HOST
+            value: "db.example.com"
+
+  - it: TRUSTD_DB_PORT defaults to 5432
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_PORT
+            value: "5432"
+
+  - it: TRUSTD_DB_NAME is set from database.name
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_NAME
+            value: "trustify"
+
+  - it: TRUSTD_DB_USER is set from database.username
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_USER
+            value: "dbuser"
+
+  - it: TRUSTD_DB_PASSWORD is set from database.password
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_PASSWORD
+            value: "dbpass"
+
+  - it: TRUSTD_DB_SSLMODE defaults to allow
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_SSLMODE
+            value: allow
+
+  - it: TRUSTD_DB_SSLMODE can be overridden to require
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      database.sslMode: require
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_SSLMODE
+            value: require
+
+  - it: fails when required database host is missing
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      database.host: null
+    asserts:
+      - failedTemplate: {}

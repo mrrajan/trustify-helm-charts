@@ -1,0 +1,45 @@
+suite: readOnly helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: no TRUSTD_READ_ONLY env var when both module and global are false
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_READ_ONLY
+          any: true
+
+  - it: module-level readOnly true produces TRUSTD_READ_ONLY true
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_READ_ONLY
+            value: "true"
+
+  - it: global readOnly true produces TRUSTD_READ_ONLY true
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      readOnly: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_READ_ONLY
+            value: "true"

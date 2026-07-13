@@ -1,0 +1,44 @@
+suite: collector helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: no sidecar annotation when metrics and tracing both disabled
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - isNull:
+          path: spec.template.metadata.annotations["sidecar.opentelemetry.io/inject"]
+
+  - it: sidecar annotation present when metrics enabled
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      metrics:
+        enabled: true
+      collector:
+        endpoint: "http://collector:4317"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["sidecar.opentelemetry.io/inject"]
+          value: "true"
+
+  - it: sidecar annotation present when tracing enabled
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      tracing:
+        enabled: true
+      collector:
+        endpoint: "http://collector:4317"
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["sidecar.opentelemetry.io/inject"]
+          value: "true"

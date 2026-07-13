@@ -1,0 +1,92 @@
+suite: create-database job
+templates:
+  - templates/init/create-database/020-Job.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+  createDatabase:
+    host: admin-host
+    name: postgres
+    username: admin
+    password: admin-pass
+tests:
+  - it: renders when enabled
+    set:
+      modules.createDatabase.enabled: true
+    asserts:
+      - isKind:
+          of: Job
+
+  - it: does not render by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is create-db
+    set:
+      modules.createDatabase.enabled: true
+    asserts:
+      - equal:
+          path: metadata.name
+          value: create-db
+
+  - it: backoffLimit is 1000
+    set:
+      modules.createDatabase.enabled: true
+    asserts:
+      - equal:
+          path: spec.backoffLimit
+          value: 1000
+
+  - it: ttlSecondsAfterFinished is 600
+    set:
+      modules.createDatabase.enabled: true
+    asserts:
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: 600
+
+  - it: PGHOST env var present
+    set:
+      modules.createDatabase.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGHOST
+            value: admin-host
+
+  - it: DB_NAME env var present
+    set:
+      modules.createDatabase.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_NAME
+            value: trustify
+
+  - it: init-data volume mount at /etc/init-data
+    set:
+      modules.createDatabase.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /etc/init-data
+            name: init-data
+
+  - it: container command starts with psql
+    set:
+      modules.createDatabase.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command[0]
+          value: psql

@@ -1,0 +1,71 @@
+suite: migrate-database job
+templates:
+  - templates/init/migrate-database/020-Job.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+  migrateDatabase: {}
+tests:
+  - it: renders when enabled
+    set:
+      modules.migrateDatabase.enabled: true
+    asserts:
+      - isKind:
+          of: Job
+
+  - it: does not render by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is migrate-db
+    set:
+      modules.migrateDatabase.enabled: true
+    asserts:
+      - equal:
+          path: metadata.name
+          value: migrate-db
+
+  - it: ArgoCD sync-wave annotation is 3
+    set:
+      modules.migrateDatabase.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "3"
+
+  - it: Helm hook-weight is 20
+    set:
+      modules.migrateDatabase.enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "20"
+
+  - it: container command is trustd db migrate
+    set:
+      modules.migrateDatabase.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value:
+            - trustd
+            - db
+            - migrate
+
+  - it: TRUSTD_DB_HOST env var present
+    set:
+      modules.migrateDatabase.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_HOST
+            value: localhost

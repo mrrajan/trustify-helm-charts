@@ -1,0 +1,49 @@
+suite: tls helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+  - templates/services/server/040-Service.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: non-OpenShift service port is 80
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+
+  - it: OpenShift with useServiceCa service port is 443
+    template: templates/services/server/040-Service.yaml
+    set:
+      openshift:
+        enabled: true
+        useServiceCa: true
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 443
+
+  - it: non-OpenShift has no serving-cert annotation
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - isNull:
+          path: metadata.annotations["service.beta.openshift.io/serving-cert-secret-name"]
+
+  - it: OpenShift has serving-cert annotation
+    template: templates/services/server/040-Service.yaml
+    set:
+      openshift:
+        enabled: true
+        useServiceCa: true
+    asserts:
+      - isNotNull:
+          path: metadata.annotations["service.beta.openshift.io/serving-cert-secret-name"]

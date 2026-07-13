@@ -1,0 +1,66 @@
+suite: server service
+templates:
+  - templates/services/server/040-Service.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: renders when server is enabled
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - isKind:
+          of: Service
+
+  - it: does not render when disabled
+    template: templates/services/server/040-Service.yaml
+    set:
+      modules.server.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is server
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: server
+
+  - it: port 80 by default (non-OpenShift)
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+
+  - it: port 443 when OpenShift enabled
+    template: templates/services/server/040-Service.yaml
+    set:
+      openshift:
+        enabled: true
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 443
+
+  - it: type is ClusterIP
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: selector includes app.kubernetes.io/name server
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: server

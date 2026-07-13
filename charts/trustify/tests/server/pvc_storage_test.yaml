@@ -1,0 +1,99 @@
+suite: server storage pvc
+templates:
+  - templates/services/server/010-PersistentVolumeClaim-storage.yaml
+set:
+  appDomain: .test.example.com
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: renders when server enabled and storage type is filesystem
+    template: templates/services/server/010-PersistentVolumeClaim-storage.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 1Gi
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+
+  - it: does not render when server disabled
+    template: templates/services/server/010-PersistentVolumeClaim-storage.yaml
+    set:
+      modules.server.enabled: false
+      storage:
+        type: filesystem
+        size: 1Gi
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: does not render when storage type is s3
+    template: templates/services/server/010-PersistentVolumeClaim-storage.yaml
+    set:
+      storage:
+        type: s3
+        accessKey: k
+        secretKey: s
+        bucket: b
+        region: r
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is storage
+    template: templates/services/server/010-PersistentVolumeClaim-storage.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 1Gi
+    asserts:
+      - equal:
+          path: metadata.name
+          value: storage
+
+  - it: storage size matches config
+    template: templates/services/server/010-PersistentVolumeClaim-storage.yaml
+    set:
+      storage:
+        type: filesystem
+        size: "10Gi"
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: "10Gi"
+
+  - it: accessModes contains ReadWriteOnce
+    template: templates/services/server/010-PersistentVolumeClaim-storage.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 1Gi
+    asserts:
+      - contains:
+          path: spec.accessModes
+          content: ReadWriteOnce
+
+  - it: storageClassName rendered when set
+    template: templates/services/server/010-PersistentVolumeClaim-storage.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 1Gi
+        storageClassName: gp3
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: "gp3"
+
+  - it: no storageClassName when not set
+    template: templates/services/server/010-PersistentVolumeClaim-storage.yaml
+    set:
+      storage:
+        type: filesystem
+        size: 1Gi
+    asserts:
+      - notExists:
+          path: spec.storageClassName

@@ -1,0 +1,30 @@
+suite: annotations helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: module annotations included when set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.annotations:
+        custom-annotation: custom-value
+    asserts:
+      - equal:
+          path: metadata.annotations.custom-annotation
+          value: custom-value
+
+  - it: configHash/auth annotation always present on pod template
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations["configHash/auth"]

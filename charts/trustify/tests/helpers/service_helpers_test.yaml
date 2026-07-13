@@ -1,0 +1,53 @@
+suite: service helpers
+templates:
+  - templates/services/server/040-Service.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: service port is 80 for non-OpenShift (default)
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 80
+
+  - it: service port is 443 for OpenShift with useServiceCa
+    template: templates/services/server/040-Service.yaml
+    set:
+      openshift:
+        enabled: true
+    asserts:
+      - equal:
+          path: spec.ports[0].port
+          value: 443
+
+  - it: serving-cert annotation present on OpenShift
+    template: templates/services/server/040-Service.yaml
+    set:
+      openshift:
+        enabled: true
+    asserts:
+      - exists:
+          path: metadata.annotations["service.beta.openshift.io/serving-cert-secret-name"]
+
+  - it: no serving-cert annotation on non-OpenShift
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - notExists:
+          path: metadata.annotations["service.beta.openshift.io/serving-cert-secret-name"]
+
+  - it: service type is ClusterIP
+    template: templates/services/server/040-Service.yaml
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP

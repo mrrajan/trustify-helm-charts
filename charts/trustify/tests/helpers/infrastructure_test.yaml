@@ -1,0 +1,74 @@
+suite: infrastructure helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: INFRASTRUCTURE_ENABLED is true
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: INFRASTRUCTURE_ENABLED
+            value: "true"
+
+  - it: INFRASTRUCTURE_BIND uses default port 9010
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: INFRASTRUCTURE_BIND
+            value: "[::]:9010"
+
+  - it: infra container port 9010 defined with name infra
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 9010
+            protocol: TCP
+            name: infra
+
+  - it: liveness probe present with httpGet path /health/live
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /health/live
+
+  - it: readiness probe present with httpGet path /health/ready
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /health/ready
+
+  - it: METRICS env var not present when metrics disabled
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: METRICS
+          any: true
+
+  - it: TRACING env var not present when tracing disabled
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRACING
+          any: true

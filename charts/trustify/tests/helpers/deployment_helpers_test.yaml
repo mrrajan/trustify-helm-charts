@@ -1,0 +1,82 @@
+suite: deployment helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: module-level replicas override global default
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.replicas: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: global replicas used when module replicas not set
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      replicas: 2
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: replicas defaults to 1 from values.yaml
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: serviceAccountName rendered when set on module
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.serviceAccountName: my-sa
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: "my-sa"
+
+  - it: no serviceAccountName field when not set
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - isNull:
+          path: spec.template.spec.serviceAccountName
+
+  - it: resources rendered when set
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 8Gi
+
+  - it: module affinity overrides storage-based affinity
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: disktype
+                    operator: In
+                    values:
+                      - ssd
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.affinity.nodeAffinity
+      - isNull:
+          path: spec.template.spec.affinity.podAffinity

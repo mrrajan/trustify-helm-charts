@@ -1,0 +1,72 @@
+suite: ingress helpers
+templates:
+  - templates/services/server/050-Ingress.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: ingress className rendered when modules.server.ingress.className is set
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      modules.server.ingress.className: nginx
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: "nginx"
+
+  - it: ingress className rendered from global ingress.className
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      ingress.className: traefik
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: "traefik"
+
+  - it: no ingressClassName when not set
+    template: templates/services/server/050-Ingress.yaml
+    asserts:
+      - notExists:
+          path: spec.ingressClassName
+
+  - it: OpenShift termination annotation reencrypt by default
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      openshift:
+        enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["route.openshift.io/termination"]
+          value: reencrypt
+
+  - it: TLS config propagated when ingress.tls is set
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      ingress:
+        enabled: true
+        tls:
+          - secretName: my-tls-secret
+            hosts:
+              - server.test.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: my-tls-secret
+
+  - it: backend service name is server and port name is endpoint
+    template: templates/services/server/050-Ingress.yaml
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: server
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: endpoint

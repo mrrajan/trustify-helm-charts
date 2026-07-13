@@ -1,0 +1,28 @@
+suite: name helper
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: should set metadata name to server for server deployment
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: server
+
+  - it: should set metadata name to server-auth for auth configmap
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: server-auth

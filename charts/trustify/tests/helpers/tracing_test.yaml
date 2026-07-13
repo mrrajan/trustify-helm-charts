@@ -1,0 +1,37 @@
+suite: tracing helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: TRACING env var not present when tracing.enabled is false (default)
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRACING
+          any: true
+
+  - it: TRACING env var present when tracing.enabled is true
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      tracing:
+        enabled: true
+      collector:
+        endpoint: http://collector:4317
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRACING
+            value: "enabled"

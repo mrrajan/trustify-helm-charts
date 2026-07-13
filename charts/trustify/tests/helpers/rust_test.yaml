@@ -1,0 +1,70 @@
+suite: rust helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: RUST_LOG defaults to info
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUST_LOG
+            value: "info"
+
+  - it: RUST_LOG uses global logFilter
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      rust:
+        logFilter: debug
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUST_LOG
+            value: "debug"
+
+  - it: RUST_LOG uses module logFilter override
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      rust:
+        logFilter: debug
+      modules.server.rust:
+        logFilter: trace
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUST_LOG
+            value: "trace"
+
+  - it: RUST_BACKTRACE present when backtrace enabled
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      rust:
+        backtrace: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUST_BACKTRACE
+            value: "1"
+
+  - it: no RUST_BACKTRACE when backtrace not set
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUST_BACKTRACE
+          any: true

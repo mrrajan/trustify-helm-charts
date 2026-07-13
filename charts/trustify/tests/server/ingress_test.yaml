@@ -1,0 +1,73 @@
+suite: server ingress
+templates:
+  - templates/services/server/050-Ingress.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: renders when server and ingress enabled
+    template: templates/services/server/050-Ingress.yaml
+    asserts:
+      - isKind:
+          of: Ingress
+
+  - it: does not render when server disabled
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      modules.server.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: does not render when ingress disabled
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      ingress.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: default host from appDomain
+    template: templates/services/server/050-Ingress.yaml
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: "server.test.example.com"
+
+  - it: backend service name is server
+    template: templates/services/server/050-Ingress.yaml
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: server
+
+  - it: backend port name is endpoint
+    template: templates/services/server/050-Ingress.yaml
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: endpoint
+
+  - it: OpenShift termination annotation reencrypt when openshift enabled
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      openshift:
+        enabled: true
+    asserts:
+      - equal:
+          path: metadata.annotations["route.openshift.io/termination"]
+          value: reencrypt
+
+  - it: no OpenShift annotation when non-OpenShift
+    template: templates/services/server/050-Ingress.yaml
+    asserts:
+      - notExists:
+          path: metadata.annotations["route.openshift.io/termination"]

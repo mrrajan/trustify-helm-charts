@@ -1,0 +1,31 @@
+suite: value helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: valueFrom secretKeyRef triggers lookup failure in test mode
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      oidc:
+        clients:
+          frontend:
+            clientId:
+              valueFrom:
+                secretKeyRef:
+                  name: my-secret
+                  key: client-id
+          cli:
+            clientSecret:
+    asserts:
+      - failedTemplate:
+          errorMessage: "Secret 'my-secret' not found in namespace 'NAMESPACE' (or 'lookup' is unavailable in this mode)"

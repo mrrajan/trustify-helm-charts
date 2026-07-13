@@ -1,0 +1,188 @@
+suite: server deployment
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: renders when server is enabled (default)
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+
+  - it: does not render when server is disabled
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      modules.server.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is server
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: server
+
+  - it: correct replicas default (1)
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: NAMESPACE env var from fieldRef metadata.namespace
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+
+  - it: RUST_LOG env var present
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUST_LOG
+            value: "info"
+
+  - it: INFRASTRUCTURE_ENABLED env var is true
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: INFRASTRUCTURE_ENABLED
+            value: "true"
+
+  - it: "HTTP_SERVER_BIND_ADDR is ::"
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_BIND_ADDR
+            value: "::"
+
+  - it: TRUSTD_DB_HOST from database config
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_DB_HOST
+            value: "localhost"
+
+  - it: TRUSTD_STORAGE_STRATEGY is fs for filesystem storage
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUSTD_STORAGE_STRATEGY
+            value: "fs"
+
+  - it: UI_ISSUER_URL present
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_ISSUER_URL
+          any: true
+
+  - it: UI_CLIENT_ID present with value frontend
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_CLIENT_ID
+            value: "frontend"
+
+  - it: UI_LOAD_USER present with value true
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UI_LOAD_USER
+            value: "true"
+
+  - it: SWAGGER_UI_OIDC_ISSUER_URL present
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SWAGGER_UI_OIDC_ISSUER_URL
+          any: true
+
+  - it: auth volume mount at /etc/config/auth.yaml
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config-auth
+            mountPath: /etc/config/auth.yaml
+            subPath: auth.yaml
+          any: true
+
+  - it: storage volume mount for filesystem at /data/storage
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: storage
+            mountPath: /data/storage
+
+  - it: container command is /usr/local/bin/trustd
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value:
+            - "/usr/local/bin/trustd"
+
+  - it: container args include api and --auth-configuration
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - api
+            - --auth-configuration
+            - /etc/config/auth.yaml
+
+  - it: endpoint port 8080 defined
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            containerPort: 8080
+            name: endpoint
+            protocol: TCP
+
+  - it: configHash/auth annotation present on pod template
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - isNotNull:
+          path: spec.template.metadata.annotations["configHash/auth"]

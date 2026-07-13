@@ -1,0 +1,58 @@
+suite: server auth configmap
+templates:
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: renders when server is enabled
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+
+  - it: does not render when server disabled
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    set:
+      modules.server.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is server-auth
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: server-auth
+
+  - it: has data key auth.yaml
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - isNotNull:
+          path: data["auth.yaml"]
+
+  - it: keycloak default content includes create:document scope mapping
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    asserts:
+      - matchRegex:
+          path: data["auth.yaml"]
+          pattern: "create:document"
+
+  - it: does not render when authenticator configMapRef set
+    template: templates/services/server/020-ConfigMap-auth.yaml
+    set:
+      authenticator:
+        configMapRef:
+          name: ext-auth
+          key: auth.yaml
+    asserts:
+      - hasDocuments:
+          count: 0

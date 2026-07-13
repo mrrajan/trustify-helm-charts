@@ -1,0 +1,40 @@
+suite: hosts helpers
+templates:
+  - templates/services/server/050-Ingress.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: default host is server.test.example.com when appDomain is .test.example.com
+    template: templates/services/server/050-Ingress.yaml
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: "server.test.example.com"
+
+  - it: custom host when modules.server.ingress.hosts is set
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      modules.server.ingress.hosts:
+        - custom.example.com
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: "custom.example.com"
+
+  - it: different appDomain produces different host
+    template: templates/services/server/050-Ingress.yaml
+    set:
+      appDomain: .staging.example.org
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: "server.staging.example.org"

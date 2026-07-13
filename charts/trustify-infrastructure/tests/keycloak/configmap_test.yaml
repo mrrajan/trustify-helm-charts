@@ -1,0 +1,84 @@
+suite: keycloak configmap
+templates:
+  - templates/keycloak/010-ConfigMap.yaml
+tests:
+  - it: renders when keycloak enabled
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - isKind:
+          of: ConfigMap
+
+  - it: does not render when keycloak disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: does not render when keycloakPostInstall disabled
+    set:
+      keycloak:
+        enabled: true
+      keycloakPostInstall:
+        disabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: metadata name is post-install-keycloak-config
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - equal:
+          path: metadata.name
+          value: post-install-keycloak-config
+
+  - it: includes client-frontend.json when frontend in oidc.clients
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+      oidc:
+        clients:
+          frontend: {}
+    asserts:
+      - isNotNull:
+          path: data["client-frontend.json"]
+
+  - it: includes client-cli.json when cli in oidc.clients
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+      oidc:
+        clients:
+          cli:
+            clientSecret: "test-secret"
+    asserts:
+      - isNotNull:
+          path: data["client-cli.json"]
+
+  - it: default clientId frontend in frontend JSON when not overridden
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+      oidc:
+        clients:
+          frontend: {}
+    asserts:
+      - matchRegex:
+          path: data["client-frontend.json"]
+          pattern: '"clientId":\s*"frontend"'
+
+  - it: includes there-is-more.sh script in data
+    set:
+      keycloak:
+        enabled: true
+      appDomain: .test.example.com
+    asserts:
+      - isNotNull:
+          path: data["there-is-more.sh"]

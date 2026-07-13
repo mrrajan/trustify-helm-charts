@@ -1,0 +1,34 @@
+suite: metrics helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: no metrics pod label when metrics.enabled is false (default)
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - isNotNull:
+          path: spec.template.metadata.labels
+      - notExists:
+          path: spec.template.metadata.labels.metrics
+
+  - it: metrics pod label present when metrics.enabled is true
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      metrics:
+        enabled: true
+      collector:
+        endpoint: http://collector:4317
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.metrics
+          value: "true"

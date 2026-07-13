@@ -1,0 +1,77 @@
+suite: ocp helpers
+templates:
+  - templates/services/server/030-Deployment.yaml
+  - templates/services/server/020-ConfigMap-auth.yaml
+set:
+  appDomain: .test.example.com
+  storage:
+    type: filesystem
+    size: 1Gi
+  database:
+    host: localhost
+    name: trustify
+    username: postgres
+    password: postgres
+tests:
+  - it: non-OpenShift default has no HTTP_SERVER_TLS_ENABLED env var
+    template: templates/services/server/030-Deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_TLS_ENABLED
+          any: true
+
+  - it: OpenShift enabled with useServiceCa includes HTTP_SERVER_TLS_ENABLED env var
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      openshift:
+        enabled: true
+        useServiceCa: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_TLS_ENABLED
+            value: "true"
+
+  - it: OpenShift enabled but useServiceCa false has no HTTP_SERVER_TLS_ENABLED env var
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      openshift:
+        enabled: true
+        useServiceCa: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_TLS_ENABLED
+          any: true
+
+  - it: OpenShift detected via capabilities includes HTTP_SERVER_TLS_ENABLED env var
+    template: templates/services/server/030-Deployment.yaml
+    capabilities:
+      apiVersions:
+        - route.openshift.io/v1/Route
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_TLS_ENABLED
+            value: "true"
+
+  - it: explicit openshift.enabled false overrides capability detection
+    template: templates/services/server/030-Deployment.yaml
+    set:
+      openshift:
+        enabled: false
+        useServiceCa: true
+    capabilities:
+      apiVersions:
+        - route.openshift.io/v1/Route
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HTTP_SERVER_TLS_ENABLED
+          any: true
