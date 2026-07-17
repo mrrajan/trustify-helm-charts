@@ -1,0 +1,30 @@
+{{- if .Values.modules.migrateDatabase.enabled }}
+{{- $storage := .Values.modules.migrateDatabase.storage | default .Values.storage }}
+{{- if eq $storage.type "filesystem" }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "trustification.common.name" ( dict "root" . "name" "migrate-db-storage" ) }}
+  labels:
+    {{- include "trustification.common.labels" ( dict "root" . "name" "migrate-db-storage" ) | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "2"
+    helm.sh/hook-weight: "10"
+    helm.sh/hook: "pre-install,pre-upgrade"
+    helm.sh/hook-delete-policy: before-hook-creation
+
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ include "trustification.common.byteSizeValue" ($storage.size | default "8Gi") }}
+
+{{- with $storage.storageClassName }}
+  storageClassName: {{ . | quote }}
+{{- end }}
+
+{{- end }}
+{{- end }}

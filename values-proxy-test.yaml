@@ -17,12 +17,13 @@ metrics: {}
 image:
   fullName: change-me
   pullPolicy: IfNotPresent
-  name: null
-  registry: null
 
 modules:
+  server:
+    resources: null
   importer:
     enabled: true
+    resources: null
     extraEnv:
       - name: HTTP_PROXY
         value: "http://squid-proxy:3128"
