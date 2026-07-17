@@ -34,7 +34,12 @@ spec:
       {{- include "trustification.application.pod" $mod | nindent 6 }}
 
       volumes:
-        {{- include "trustification.storage.volume" $mod | nindent 8 }}
+        {{- $storage := $mod.module.storage | default .Values.storage }}
+        {{- if eq $storage.type "filesystem" }}
+        - name: storage
+          persistentVolumeClaim:
+            claimName: {{ include "trustification.common.name" ( dict "root" . "name" "migrate-db-storage" ) }}
+        {{- end }}
         {{- include "trustification.application.extraVolumes" $mod | nindent 8 }}
 
       containers:
