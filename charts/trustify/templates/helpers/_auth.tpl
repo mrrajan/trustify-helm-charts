@@ -98,7 +98,9 @@ authentication:
 
       additionalPermissions:
         - "ai"
+        - "create.exploitIntelligence"
         - "read.advisory"
+        - "read.exploitIntelligence"
         - "read.importer"
         - "read.metadata"
         - "read.sbom"
@@ -181,7 +183,7 @@ authentication:
       issuerUrl: {{ include "trustification.oidc.issuerUrlForClient" (dict "root" .root "clientId" "frontend" ) }}
       scopeMappings: &keycloakScopeMappings
         "create:document": [ "create.advisory", "create.importer", "create.metadata", "create.sbom", "create.sbomGroup", "create.weakness", "upload.dataset" ]
-        "read:document": [ "ai", "read.advisory", "read.importer", "read.metadata", "read.sbom", "read.sbomGroup", "read.weakness", "read.systemInformation" ]
+        "read:document": [ "ai", "create.exploitIntelligence", "read.advisory", "read.exploitIntelligence", "read.importer", "read.metadata", "read.sbom", "read.sbomGroup", "read.weakness", "read.systemInformation" ]
         "update:document": [ "update.advisory", "update.importer", "update.metadata", "update.sbom", "update.sbomGroup", "update.weakness" ]
         "delete:document": [ "delete.advisory", "delete.importer", "delete.metadata", "delete.sbom", "delete.sbomGroup", "delete.vulnerability", "delete.weakness" ]
       {{- with .root.Values.tls.additionalTrustAnchor }}
