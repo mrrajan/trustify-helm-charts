@@ -1002,6 +1002,10 @@ definitions:
     description: |
       OIDC credentials for authenticating with the EI service using client credentials flow.
       All three of clientId, clientSecret, and issuerUrl must be set together.
+    dependencies:
+      clientId: [ "clientSecret", "issuerUrl" ]
+      clientSecret: [ "clientId", "issuerUrl" ]
+      issuerUrl: [ "clientId", "clientSecret" ]
     properties:
       clientId:
         $ref: "#/definitions/ValueOrRef"

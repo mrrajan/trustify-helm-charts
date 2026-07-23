@@ -1263,6 +1263,20 @@
       "type": "object",
       "additionalProperties": false,
       "description": "OIDC credentials for authenticating with the EI service using client credentials flow.\nAll three of clientId, clientSecret, and issuerUrl must be set together.\n",
+      "dependencies": {
+        "clientId": [
+          "clientSecret",
+          "issuerUrl"
+        ],
+        "clientSecret": [
+          "clientId",
+          "issuerUrl"
+        ],
+        "issuerUrl": [
+          "clientId",
+          "clientSecret"
+        ]
+      },
       "properties": {
         "clientId": {
           "$ref": "#/definitions/ValueOrRef",
