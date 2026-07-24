@@ -993,6 +993,10 @@ definitions:
         minimum: 0
         description: |
           Maximum consecutive poll failures before giving up.
+      workerPollInterval:
+        type: string
+        description: |
+          How often the background worker checks for new EI jobs (humantime, e.g. "5s").
       oidc:
         $ref: "#/definitions/ExploitIntelligenceOidc"
 
