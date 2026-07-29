@@ -971,32 +971,20 @@ definitions:
         $ref: "#/definitions/ValueOrRef"
         description: |
           Base URL of the EI web UI for deep-linking to reports. Fallsback to base URL of the EI client service if unset.
-      pollInterval:
-        type: string
-        description: |
-          Polling interval for analysis completion (humantime, e.g. "30s").
-      maxPollDuration:
-        type: string
-        description: |
-          Maximum duration before polling is considered timed out (humantime, e.g. "30m").
-      uploadMaxRetries:
+      maxRetries:
         type: integer
         minimum: 0
         description: |
-          Maximum number of upload retry attempts.
-      uploadRetryDelay:
-        type: string
-        description: |
-          Initial delay between upload retries (humantime, exponential backoff).
-      maxConsecutivePollFailures:
-        type: integer
-        minimum: 0
-        description: |
-          Maximum consecutive poll failures before giving up.
+          Maximum number of retry attempts before a job is marked as failed.
       workerPollInterval:
         type: string
         description: |
           How often the background worker checks for new EI jobs (humantime, e.g. "5s").
+      concurrency:
+        type: integer
+        minimum: 1
+        description: |
+          Number of concurrent worker loops processing EI jobs.
       oidc:
         $ref: "#/definitions/ExploitIntelligenceOidc"
 

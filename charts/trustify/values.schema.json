@@ -1232,31 +1232,19 @@
           "$ref": "#/definitions/ValueOrRef",
           "description": "Base URL of the EI web UI for deep-linking to reports. Fallsback to base URL of the EI client service if unset.\n"
         },
-        "pollInterval": {
-          "type": "string",
-          "description": "Polling interval for analysis completion (humantime, e.g. \"30s\").\n"
-        },
-        "maxPollDuration": {
-          "type": "string",
-          "description": "Maximum duration before polling is considered timed out (humantime, e.g. \"30m\").\n"
-        },
-        "uploadMaxRetries": {
+        "maxRetries": {
           "type": "integer",
           "minimum": 0,
-          "description": "Maximum number of upload retry attempts.\n"
-        },
-        "uploadRetryDelay": {
-          "type": "string",
-          "description": "Initial delay between upload retries (humantime, exponential backoff).\n"
-        },
-        "maxConsecutivePollFailures": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Maximum consecutive poll failures before giving up.\n"
+          "description": "Maximum number of retry attempts before a job is marked as failed.\n"
         },
         "workerPollInterval": {
           "type": "string",
           "description": "How often the background worker checks for new EI jobs (humantime, e.g. \"5s\").\n"
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of concurrent worker loops processing EI jobs.\n"
         },
         "oidc": {
           "$ref": "#/definitions/ExploitIntelligenceOidc"
